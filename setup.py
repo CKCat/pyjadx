@@ -1,16 +1,13 @@
 import os
-import re
 import sys
 import platform
 import subprocess
-import glob
 import setuptools
 import pathlib
 
 from pkg_resources import Distribution, get_distribution
 
 from setuptools import setup, Extension
-from setuptools import Extension
 from setuptools.command.build_ext import build_ext, copy_file
 
 from distutils.version import LooseVersion
@@ -25,16 +22,18 @@ CURRENT_DIR = pathlib.Path(__file__).parent
 class PyJadxDistribution(setuptools.Distribution):
     global_options = setuptools.Distribution.global_options + [
         ('static-jvm', None, 'Link against JVM statically'),
-        ]
+        ('asan', None, 'Enable ASAN'),
+    ]
 
     def __init__(self, attrs=None):
         self.static_jvm = False
+        self.asan = False
         super().__init__(attrs)
 
 class Module(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
-        self.sourcedir = os.path.abspath(os.path.join(CURRENT_DIR))
+        self.sourcedir = os.path.abspath(os.path.join(CURRENT_DIR.as_posix()))
 
 
 class CMakeBuild(build_ext):
@@ -56,16 +55,22 @@ class CMakeBuild(build_ext):
         fullname = self.get_ext_fullname(ext.name)
         filename = self.get_ext_filename(fullname)
 
-        source_dir                     = ext.sourcedir
-        build_temp                     = self.build_temp
-        extdir                         = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
-        static_jvm                     = "ON" if self.distribution.static_jvm else "OFF"
+        source_dir = ext.sourcedir
+        build_temp = self.build_temp
+        extdir     = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        static_jvm = "ON" if self.distribution.static_jvm else "OFF"
+        asan       = "ON" if self.distribution.asan else "OFF"
+
+        if asan == "ON":
+            log.info("ASAN Enabled!")
+
 
         cmake_library_output_directory = os.path.abspath(os.path.dirname(build_temp))
         cmake_args = [
             '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}'.format(cmake_library_output_directory),
             '-DPYTHON_EXECUTABLE={}'.format(sys.executable),
             '-DJVM_STATIC_LINK={}'.format(static_jvm),
+            '-DPYJADX_ASAN={}'.format(asan),
         ]
 
 
@@ -89,14 +94,27 @@ class CMakeBuild(build_ext):
 
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
 
-        log.info("Using {} jobs".format(jobs))
-        subprocess.check_call(['make', '-j', str(jobs), 'pyjadx'], cwd=self.build_temp)
+        if os.name == 'nt':
+            subprocess.check_call(
+                ['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+        else:
+            log.info("Using {} jobs".format(jobs))
+            subprocess.check_call(
+                ['make', '-j', str(jobs), 'pyjadx'], cwd=self.build_temp)
 
-        pyjadx_dst  = os.path.join(self.build_lib, self.get_ext_filename(self.get_ext_fullname(ext.name)))
+        pyjadx_dst = os.path.join(self.build_lib, self.get_ext_filename(
+            self.get_ext_fullname(ext.name)))
 
         libsuffix = pyjadx_dst.split(".")[-1]
 
-        pyjadx_path = os.path.join(cmake_library_output_directory, "pyjadx.{}".format(libsuffix))
+        if os.name == 'nt':
+            # TODO: check why it outputs there
+            pyjadx_path = os.path.join(
+                cmake_library_output_directory, cfg, 'bindings/python', cfg, "pyjadx.{}".format(libsuffix))
+        else:
+            pyjadx_path = os.path.join(
+                cmake_library_output_directory, "pyjadx.{}".format(libsuffix))
+
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)
 
@@ -107,7 +125,7 @@ class CMakeBuild(build_ext):
 
 
 # From setuptools-git-version
-command       = 'git describe --tags --long --dirty'
+command       = 'git describe --tags --long --dirty --always'
 is_tagged_cmd = 'git tag --list --points-at=HEAD'
 fmt           = '{tag}.dev2'
 fmt_tagged    = '{tag}'
@@ -146,12 +164,12 @@ def get_version():
         is_tagged = False
         try:
             is_tagged = check_if_tagged()
-        except:
+        except Exception:
             is_tagged = False
 
         try:
             return get_git_version(is_tagged)
-        except:
+        except Exception:
             pass
 
     if pkg_info.is_file():
@@ -160,8 +178,6 @@ def get_version():
 
 
 version = get_version()
-
-
 
 setup(
     distclass=PyJadxDistribution,

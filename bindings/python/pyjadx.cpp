@@ -21,7 +21,10 @@
 
 py::module jadx_module("pyjadx", "JADX Python API");
 
+using namespace jni::jadx::args;
+using namespace jni::jadx::info;
 using namespace jni::jadx::api;
+
 
 PYBIND11_MODULE(pyjadx, jadx_module) {
 
@@ -39,11 +42,14 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
 
   py::class_<jni::Jadx>(jadx_module, "Jadx", "")
     .def(py::init<>())
+    .def_static("get", &jni::Jadx::instance, py::return_value_policy::reference)
+    //.def("__init__", [] (jni::Jadx& self) { self = jni::Jadx::instance(); })
     .def("load",
         &jni::Jadx::load,
         "Load an APK or Dex file to decompile",
         "apk_path"_a, "escape_unicode"_a = true, "show_inconsistent_code"_a = true,
-        "deobfuscation_on"_a = false, "deobfuscation_min_length"_a = 3, "deobfuscation_max_length"_a = 64
+        "deobfuscation_on"_a = false, "deobfuscation_min_length"_a = 3, "deobfuscation_max_length"_a = 64,
+        "replace_consts"_a = false
         );
 
 
@@ -95,15 +101,65 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
         &JavaMethod::decompiled_line,
         "Line number in decompiled code associated with this method")
 
+    .def_property_readonly("access_flags",
+        &JavaMethod::getAccessFlags,
+        "accessor to getAccessFlags")
+
+    .def_property_readonly("return_type",
+        &JavaMethod::getReturnType,
+        "accessor to getReturnType")
+
+    .def_property_readonly("arguments",
+        &JavaMethod::getArguments,
+        "accessor to getArguments")
+
     .def("__str__", &JavaMethod::to_string)
     .def("__hash__", &JavaMethod::hash_code)
-    .def("__eq__", &JavaMethod::operator==);
+    .def("__eq__", &JavaMethod::operator==)
+    .def("getAccessFlags", &JavaMethod::getAccessFlags);
+
+  py::class_<AccessInfo>(jadx_module, "AccessInfo", "")
+    .def("__str__", &AccessInfo::to_string)
+    .def_property_readonly("is_native", &AccessInfo::isNative, "Indicate if is native")
+    .def_property_readonly("is_public", &AccessInfo::isPublic, "Indicate if is public")
+    .def_property_readonly("is_protected", &AccessInfo::isProtected, "Indicate if is protected")
+    .def_property_readonly("is_private", &AccessInfo::isPrivate, "Indicate if is private")
+    .def_property_readonly("is_private_package", &AccessInfo::isPackagePrivate, "Indicate if is private to the package")
+    .def_property_readonly("is_abstract", &AccessInfo::isAbstract, "Indicate if is abstract")
+    .def_property_readonly("is_interface", &AccessInfo::isInterface, "Indicate if is an Interface")
+    .def_property_readonly("is_annotation", &AccessInfo::isAnnotation, "Indicate if is an annotation")
+    .def_property_readonly("is_static", &AccessInfo::isStatic, "Indicate if is static")
+    .def_property_readonly("is_final", &AccessInfo::isFinal, "Indicate if is final")
+    .def_property_readonly("is_constructor", &AccessInfo::isConstructor, "Indicate if is a constructor")
+    .def_property_readonly("is_enum", &AccessInfo::isEnum, "Indicate if is enum")
+    .def_property_readonly("is_synthetic", &AccessInfo::isSynthetic, "Indicate if is synthetic")
+    .def_property_readonly("is_bridge", &AccessInfo::isBridge, "Indicate if is a bridge")
+    .def_property_readonly("is_var_args", &AccessInfo::isVarArgs, "Indicate if is a varargs")
+    .def_property_readonly("is_synchronized", &AccessInfo::isSynchronized, "Indicate if is synchronized")
+    .def_property_readonly("is_transcient", &AccessInfo::isTransient, "Indicate if is transcient")
+    .def_property_readonly("is_volatile", &AccessInfo::isVolatile, "Indicate if is volatile");
+
+
+  py::class_<ArgType>(jadx_module, "ArgType", "")
+    .def("__str__", &ArgType::to_string)
+    .def_property_readonly("is_primitive", &ArgType::isPrimitive, "Indicate if is primitive type")
+    .def_property_readonly("is_array", &ArgType::isArray, "Indicate if is array")
+    .def_property_readonly("array_root_element", &ArgType::getArrayRootElement, "getter of the root element (if array)")
+    .def_property_readonly("primitive_type", &ArgType::getPrimitiveType, "return the primitive type instance corresponding to this argument");
+
+  py::class_<PrimitiveType>(jadx_module, "PrimitiveType", "")
+    .def("__str__", &PrimitiveType::to_string)
+    .def_property_readonly("longname", &PrimitiveType::getLongName, "the long name of the primitive type");
 
   py::class_<JavaClass>(jadx_module, "JavaClass", "")
-    .def_property_readonly("code",
-        &JavaClass::getCode,
-        "Java decompiled code as a ``str``")
 
+    .def_property_readonly("code",
+          &JavaClass::getCode,
+          "Java decompiled code as a ``str``")
+
+    .def_property_readonly("smali",
+          &JavaClass::getSmali,
+          "Return smali code as a ``str``")
 
     .def_property_readonly("code_highlight",
         [] (JavaClass& cls) -> py::object {
@@ -142,6 +198,31 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
           }
 
           return cls.save(str_output);
+        },
+        "Save decompiled code in the file given in first parameter\n\n"
+        "Return False is an error occurred",
+        "output_path"_a)
+
+
+    .def("save_smali",
+        [] (JavaClass& cls, py::object output) {
+          std::string str_output;
+
+          auto&& pathlib = py::module::import("pathlib");
+          auto&& Path = pathlib.attr("Path");
+          if (py::isinstance<py::str>(output)) {
+            str_output = output.cast<std::string>();
+          }
+          else if (py::isinstance(output, Path)) {
+            str_output = output.attr("as_posix")().cast<std::string>();
+
+          } else {
+            std::string error_str = py::repr(output).cast<std::string>();
+            error_str = error_str + " is not supported!";
+            throw py::type_error(error_str.c_str());
+          }
+
+          return cls.save_smali(str_output);
         },
         "Save decompiled code in the file given in first parameter\n\n"
         "Return False is an error occurred",
@@ -202,10 +283,4 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
         },
         "Decompile the package in the directory given in first parameter"
         "output_path"_a);
-
-
-
-
-
-
 }

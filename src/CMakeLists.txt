@@ -1,5 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/jadx/CMakeLists.txt")
 include("${CMAKE_CURRENT_LIST_DIR}/java/CMakeLists.txt")
+#include("${CMAKE_CURRENT_LIST_DIR}/org/CMakeLists.txt")
 
 
 target_include_directories(jadxjni INTERFACE ${CMAKE_CURRENT_LIST_DIR})
@@ -25,5 +26,15 @@ if(APPLE)
   target_sources(jadxjni
     INTERFACE
       "${CMAKE_CURRENT_LIST_DIR}/jadx_prefix_osx.cpp"
+  )
+endif()
+
+if(WIN32)
+  target_sources(jadxjni
+    INTERFACE
+      "${CMAKE_CURRENT_LIST_DIR}/jadx_prefix_windows.cpp"
+      "${CMAKE_CURRENT_LIST_DIR}/dlfcn.c"
+    INTERFACE
+      "${CMAKE_CURRENT_LIST_DIR}/dlfcn.h"
   )
 endif()

@@ -27,7 +27,11 @@ set(JADX_PYTHON_SRC
 
 add_library(pyjadx SHARED ${JADX_PYTHON_SRC})
 
+target_link_libraries(pyjadx PUBLIC jadxjni ${PYTHON_LIBRARIES})
 
+if (MSVC)
+  target_compile_options(pyjadx PRIVATE "/permissive-")
+endif()
 
 macro(ADD_FLAG_IF_SUPPORTED flag name)
   CHECK_C_COMPILER_FLAG("${flag}"   "C_SUPPORTS_${name}")
@@ -71,4 +75,19 @@ if (UNIX)
   set_target_properties(pyjadx PROPERTIES SUFFIX ".so")
 elseif(WIN32)
   set_target_properties(pyjadx PROPERTIES SUFFIX ".pyd")
+endif()
+
+if (PYJADX_ASAN)
+  target_link_libraries(pyjadx INTERFACE asan)
+endif()
+
+
+if (CMAKE_BUILD_TYPE MATCHES Release AND UNIX AND NOT APPLE)
+  add_custom_command(
+    TARGET pyjadx
+    COMMENT "Strip Python bindings"
+    POST_BUILD
+    COMMAND
+      ${CMAKE_STRIP} --discard-all --discard-locals --strip-all --strip-unneeded $<TARGET_FILE:pyjadx>
+  )
 endif()
