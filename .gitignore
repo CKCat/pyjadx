@@ -177,3 +177,4 @@ pyjadx.egg-info/
 
 .idea/
 .vscode/
+_build

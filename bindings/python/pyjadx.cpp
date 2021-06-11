@@ -118,6 +118,24 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
     .def("__eq__", &JavaMethod::operator==)
     .def("getAccessFlags", &JavaMethod::getAccessFlags);
 
+  py::class_<JavaField>(jadx_module, "JavaField", "")
+    .def_property_readonly("name",
+        &JavaField::name,
+        "Method name as a ``str``")
+
+    .def_property_readonly("fullname",
+        &JavaField::fullname,
+        "Method fullname as a ``str``")
+
+    .def_property_readonly("access_flags",
+        &JavaField::getAccessFlags,
+        "accessor to getAccessFlags")
+
+    .def_property_readonly("type",
+        &JavaField::getType,
+        "accessor to getType");
+
+
   py::class_<AccessInfo>(jadx_module, "AccessInfo", "")
     .def("__str__", &AccessInfo::to_string)
     .def_property_readonly("is_native", &AccessInfo::isNative, "Indicate if is native")
@@ -160,6 +178,10 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
     .def_property_readonly("smali",
           &JavaClass::getSmali,
           "Return smali code as a ``str``")
+
+    .def_property_readonly("smali",
+          &JavaClass::getSmali,
+          "Return smali code as a ``str``")    
 
     .def_property_readonly("code_highlight",
         [] (JavaClass& cls) -> py::object {
@@ -230,7 +252,11 @@ PYBIND11_MODULE(pyjadx, jadx_module) {
 
     .def_property_readonly("methods",
         &JavaClass::methods,
-        "List of :class:`~pyjadx.JavaMethod`")
+        "List of :class:`pyjadx.JavaMethod`")
+
+    .def_property_readonly("fields",
+        &JavaClass::fields,
+        "List of :class:`pyjadx.JavaField`")
 
     .def_property_readonly("name",
         &JavaClass::name,

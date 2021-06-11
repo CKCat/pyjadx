@@ -91,4 +91,21 @@ JavaClass::methods_list_t JavaClass::methods(void) {
   return methods;
 }
 
+JavaClass::fields_list_t JavaClass::fields(void) {
+  using List_t = java::util::List<JavaField>;
+  static auto&& getFields = this->clazz().template GetMethod<Object<List_t::Tag>()>(this->env(), "getFields");
+
+  auto&& jfields = this->obj_.Call(this->env(), getFields);
+
+  List_t jlist{this->env(), jfields};
+
+  JavaClass::fields_list_t fields;
+  fields.reserve(jlist.size());
+
+  for (size_t i = 0; i < jlist.size(); ++i) {
+    fields.emplace_back(jlist.at(i));
+  }
+
+  return fields;
+}
 }

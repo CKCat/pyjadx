@@ -18,6 +18,7 @@
 #include <jni/jni.hpp>
 #include <jadx/api/JavaNode.hpp>
 #include <jadx/api/JavaMethod.hpp>
+#include <jadx/api/JavaField.hpp>
 #include <string>
 
 
@@ -27,6 +28,7 @@ struct JavaClassTag { static constexpr auto Name() { return "jadx/api/JavaClass"
 class JavaClass : public JavaNode<JavaClass, JavaClassTag, Object<JavaClassTag>, Class<JavaClassTag>> {
   public:
   using methods_list_t = std::vector<JavaMethod>;
+  using fields_list_t = std::vector<JavaField>;
 
   using Object_t = Object<JavaClassTag>;
   using Class_t  = Class<JavaClassTag>;
@@ -41,6 +43,8 @@ class JavaClass : public JavaNode<JavaClass, JavaClassTag, Object<JavaClassTag>,
   bool save_smali(const std::string& path);
 
   methods_list_t methods(void);
+  fields_list_t fields(void);
+
 };
 
 }

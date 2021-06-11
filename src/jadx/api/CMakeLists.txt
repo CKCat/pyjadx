@@ -6,10 +6,12 @@ target_sources(jadxjni
     "${CMAKE_CURRENT_LIST_DIR}/JavaNode.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/JavaMethod.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/JavaPackage.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/JavaField.hpp"
   INTERFACE
     "${CMAKE_CURRENT_LIST_DIR}/JadxDecompiler.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/JadxArgs.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/JavaClass.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/JavaMethod.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/JavaPackage.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/JavaField.cpp"
 )

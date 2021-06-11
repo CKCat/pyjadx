@@ -17,7 +17,10 @@ Welcome to PyJadx's documentation!
   api/java_package
   api/java_class
   api/java_method
-
+  api/java_field
+  api/java_access_info
+  api/java_arg_type
+  api/java_primitive_type
 
 .. toctree::
   :caption: Extra Information

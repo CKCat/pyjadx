@@ -7,7 +7,7 @@ to create the bridge C++ / Python.
 
 
 <p align="center" >
-<img width="50%" src="https://github.com/romainthomas/pyjadx/blob/master/.github/archi.png"/><br />
+<img width="50%" src=".github/archi.png"/><br />
 </p>
 
 
