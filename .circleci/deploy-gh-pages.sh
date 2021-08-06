@@ -9,7 +9,7 @@ set -e
 
 # show where we are on the machine
 pwd
-remote="https://${GITHUB_PERSONAL_TOKEN}@github.com/romainthomas/pyjadx.git"
+remote="https://${GITHUB_PERSONAL_TOKEN}@github.com/CKCat/pyjadx.git"
 
 
 # make a directory to put the gp-pages branch
